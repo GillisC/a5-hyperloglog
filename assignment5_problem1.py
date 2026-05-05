@@ -17,7 +17,6 @@ def murmur3_32(key, seed):
     
     # convert the input key (unicode) to utf-8
     arr = bytearray(key, "utf-8")
-    print(f"\nlength of bytearray: {len(arr)}")
     num_full_blocks = len(arr) // 4
     num_rest_blocks = (len(arr) % 4)
 
