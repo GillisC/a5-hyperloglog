@@ -123,8 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--seed", type=auto_int, default=0, help="seed value")
     args = parser.parse_args()
 
-
-    test()
+    # test()
 
     seed = args.seed
     for key in args.key:

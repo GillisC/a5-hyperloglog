@@ -1,0 +1,4 @@
+usage: assignment5_problem3.py [-h] [-s SEED] -m NUM_REGISTERS
+                               [-w NUM_WORKERS]
+                               path
+assignment5_problem3.py: error: the following arguments are required: -m/--num-registers

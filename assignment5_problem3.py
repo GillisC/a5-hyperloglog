@@ -7,10 +7,13 @@ from pyspark import SparkContext, SparkConf
 import math
 import time
 
+from assigment5_problem1 import murmur3_32 as hash_function
+from assigment5_problem2 import rho as get_rho
+
 def murmur3_32(key, seed):
     """Computes the 32-bit murmur3 hash"""
-    # copy from Problem 1
-    raise NotImplementedError()
+    # Use implementation from problem 1
+    return hash_function(key, seed)
 
 def auto_int(x):
     """Auxiliary function to help convert e.g. hex integers"""
@@ -20,8 +23,9 @@ def dlog2(n):
     return n.bit_length() - 1
 
 def rho(n):
-    # Copy from Problem 2
-    raise NotImplementedError()
+    # Use implementation from problem 2
+    return get_rho(n)
+
 
 def compute_jr(key,seed,log2m):
     """hash the string key with murmur3_32, using the given seed
@@ -36,8 +40,14 @@ def compute_jr(key,seed,log2m):
 
     Return a tuple (j,r) of integers
     """
-    # Copy from Problem 2
-    raise NotImplementedError()
+    n = n & 0xffffffff
+
+    for i in range(32):
+        if (n & 0x80000000) != 0:
+            return i+1
+        n = (n << 1) & 0xffffffff
+
+    return 0
 
 def get_files(path):
     """
@@ -59,7 +69,15 @@ def get_files(path):
 
 def alpha(m):
     """Auxiliary function: bias correction"""
-    raise NotImplementedError()
+    # according to wikipedia
+    if m == 16:
+        return 0.673
+    elif m == 32:
+        return 0.697
+    elif m == 64:
+        return 0.709
+    else
+        return (0.7213 / (1 + 1.079 / m))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -98,11 +116,26 @@ if __name__ == '__main__':
     conf.set('spark.driver.memory', '16g')
     sc = SparkContext(conf=conf)
 
+    # data can be thought of like a long string containing the file contents
     data = sc.parallelize(get_files(path))
+    
+    data = data.flatMap(lambda x: x.split()) \
+        .map(lambda x: compute_jr(x, seed, log2m)) \
+        .reduceByKey(max)
+    
+    data = data.collect()
 
-    # Implement HyperLogLog here
+    registers = []
+    for j, r in data.items():
+        registers[j] = r
 
-    E = None # replace with your own 
+    # harmonic mean
+    harm_mean = 0
+    for i in range(len(registers)):
+        harm_mean += 1 / (2 ** registers[i])
+
+    # estimate
+    E = alpha(logm) * logm * logm / harm_mean
     
     end = time.time()
 
