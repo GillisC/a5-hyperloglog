@@ -2,11 +2,7 @@
 
 import argparse
 import sys
-
-def murmur3_32(key, seed):
-    """Computes the 32-bit murmur3 hash"""
-    # use the implementation from Problem 1
-    raise NotImplementedError()
+from assignment5_problem1 import murmur3_32
 
 def auto_int(x):
     """Auxiliary function to help convert e.g. hex integers"""
@@ -19,7 +15,17 @@ def dlog2(n):
 def rho(n):
     """Given a 32-bit number n, return the 1-based position of the first
     1-bit"""
-    raise NotImplementedError()
+
+    # Currently n is an integer
+
+    n = n & 0xffffffff # make sure n is treated as 32-bit unsigned integer
+
+    for i in range(32):
+        if (n & 0x80000000) != 0: # check the most significant bit
+            return i+1            # if it is 1, return the position (1-based)
+        n = (n << 1) & 0xffffffff # left shift n by 1 bit and keep it as 32-bit unsigned integer
+
+    return 0
 
 def compute_jr(key,seed,log2m):
     """hash the string key with murmur3_32, using the given seed
@@ -40,6 +46,69 @@ def compute_jr(key,seed,log2m):
     r = rho(h)
     return j, r
 
+def test() -> None:
+    tests = [
+        {"string": "", "seed": 0x00000000, "j": 0, "r": 0},
+        {"string": "", "seed": 0x00000001, "j": 55, "r": 2},
+        {"string": "", "seed": 0xffffffff, "j": 57, "r": 1},
+        {"string": "test", "seed": 0x00000000, "j": 19, "r": 1},
+        {"string": "test", "seed": 0x9747b28c, "j": 92, "r": 2},
+        {"string": "Hello, world!", "seed": 0x00000000, "j": 67, "r": 1},
+        {"string": "Hello, world!", "seed": 0x9747b28c, "j": 58, "r": 3},
+        {
+            "string": """The quick brown fox jumps over the lazy dog""",
+            "seed": 0x00000000,
+            "j": 35,
+            "r": 3
+        },
+        {
+            "string": """The quick brown fox jumps over the lazy dog""",
+            "seed": 0x9747b28c,
+            "j": 77,
+            "r": 3
+        },
+        {
+            "string": """Rýchla hnedá líška preskočila lenivého psa""",
+            "seed": 0x00000000,
+            "j": 105,
+            "r": 2
+        },
+        {
+            "string": """Rýchla hnedá líška preskočila lenivého psa""",
+            "seed": 0x9747b28c,
+            "j": 39,
+            "r": 1
+        },
+        {
+            "string": """Быстрая коричневая лиса перепрыгивает через ленивую собаку""",
+            "seed": 0x00000000,
+            "j": 117,
+            "r": 1
+        },
+        {
+            "string": """Быстрая коричневая лиса перепрыгивает через ленивую собаку""",
+            "seed": 0x9747b28c,
+            "j": 27,
+            "r": 2
+        },
+        {"string": "敏捷的棕色狐狸跳过了懒狗", "seed": 0x00000000, "j": 100, "r": 2},
+        {"string": "敏捷的棕色狐狸跳过了懒狗", "seed": 0x9747b28c, "j": 113, "r": 1}
+    ]
+
+    for test in tests:
+        key = test["string"]
+        seed = test["seed"]
+        j = test["j"]
+        r = test["r"]
+
+        log2m = 7
+        e_j, e_r = compute_jr(key, seed, log2m)
+
+        p: bool = e_j == j and e_r == r
+        if p:
+            print(f"PASS key: {key}\tseed: {seed:#010x})")
+        else:
+            print(f"FAIL:\n\tactual j={e_j}, expected j={j}\n\tactual r={e_r}, expected r={r}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
