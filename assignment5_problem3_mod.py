@@ -6,6 +6,8 @@ import os
 from pyspark import SparkContext, SparkConf
 import math
 import time
+import secrets
+import csv
 
 from assignment5_problem1 import murmur3_32 as hash_function
 from assignment5_problem2 import rho as get_rho
@@ -45,24 +47,6 @@ def compute_jr(key,seed,log2m):
     #print(f"hash: {h:0>32b}")
     r = rho(h)
     return j, r
-
-def get_files(path):
-    """
-    A generator function: Iterates through all .txt files in the path and
-    returns the content of the files
-
-    Parameters:
-    - path : string, path to walk through
-
-    Yields:
-    The content of the files as strings
-    """
-    for (root, dirs, files) in os.walk(path):
-        for file in files:
-            if file.endswith('.txt'):
-                path = f'{root}/{file}'
-                with open(path,'r') as f:
-                    yield f.read()
 
 def alpha(m):
     """Auxiliary function: bias correction"""
@@ -115,37 +99,48 @@ if __name__ == '__main__':
     sc = SparkContext(conf=conf)
 
     # data can be thought of like a long string containing the file contents
-    #data = sc.parallelize(get_files(path))
     data = sc.textFile(f"{path}/*.txt") # nodes read files instead of the driver
     
+    seeds = [int(secrets.token_hex(4), 16) for _ in range(1000)]
+    b_seeds = sc.broadcast(seeds)
+
     # main computation part
     # incoming data is a single file content as a single string
     # split the string into words
     # get the j and rho from the word
     # reduceByKey(max) takes all j and rho values and for each unique j reduces to the max rho value found
-    data = data.flatMap(lambda x: x.split()) \
-        .map(lambda x: compute_jr(x, seed, log2m)) \
-        .reduceByKey(max)
+    results = data.flatMap(lambda x: x.split()) \
+        .flatMap(lambda word: [
+            ((seed_idx, compute_jr(word, seed, log2m)[0]), compute_jr(word, seed, log2m)[1])
+            for seed_idx, seed in enumerate(b_seeds.value)
+            ]) \
+        .map(lambda x: (x[0], x[1]))
     
     # execute
-    data = data.collect()
+    registers = results.reduceByKey(max).collect()
 
-    registers = [0] * m
-    for j, r in data:
-        registers[j] = r
+    estimates = {}
+    for (seed_idx, j), r in registers:
+        if seed_idx not in estimates:
+            estimates[seed_idx] = [0] * m
+        estimates[seed_idx][j] = r
 
-    # harmonic mean
-    harm_mean = 0
-    for i in range(len(registers)):
-        harm_mean += 1 / (2**registers[i])
-
-    # estimate
-    E = alpha(m) * (m**2) / harm_mean
+    results = []
+    for seed_idx, r_values in estimates.items():
+        # harmonic mean calculation for all registers
+        harm_mean = sum(1.0 / (2**r) for r in r_values)
+        E = alpha(m) * (m**2) / harm_mean
+        results.append({
+            "seed_idx": seed_idx,
+            "estimate": E,
+        })
     
-    end = time.time()
+    with open("results_p3_c.csv", "w") as f:
+        writer = csv.DictWriter(f, fieldnames=["seed_idx", "estimate"])
+        writer.writeheader()
+        writer.writerows(results)
 
-    print(f'Cardinality estimate: {E}')
-    print(f'Number of workers: {num_workers}')
+    end = time.time()
     print(f'Took {end-start} s')
 
     

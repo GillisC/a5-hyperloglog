@@ -2,7 +2,13 @@
 
 import argparse
 import sys
-from assignment5_problem1 import murmur3_32
+
+from assignment5_problem1 import murmur3_32 as hash_function
+
+def murmur3_32(key, seed):
+    """Computes the 32-bit murmur3 hash"""
+    # use the implementation from Problem 1
+    return hash_function(key, seed)
 
 def auto_int(x):
     """Auxiliary function to help convert e.g. hex integers"""
@@ -41,8 +47,8 @@ def compute_jr(key,seed,log2m):
     Return a tuple (j,r) of integers
     """
     h = murmur3_32(key,seed)
-    print(f'{h:08x}')
     j = ~(0xffffffff << log2m) & h
+    #print(f"hash: {h:0>32b}")
     r = rho(h)
     return j, r
 
@@ -108,7 +114,7 @@ def test() -> None:
         if p:
             print(f"PASS key: {key}\tseed: {seed:#010x})")
         else:
-            print(f"FAIL:\n\tactual j={e_j}, expected j={j}\n\tactual r={e_r}, expected r={r}")
+            print(f"FAIL for key: {key} with seed: {seed}\n\tactual j={e_j}, expected j={j}\n\tactual r={e_r}, expected r={r}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -127,6 +133,8 @@ if __name__ == '__main__':
         quit(1)
 
     log2m = dlog2(m)
+
+    #test()
 
     for key in args.key:
         h = murmur3_32(key,seed)
