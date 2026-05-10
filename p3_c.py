@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+
 import secrets # used to generate random hex values
+import argparse
+import os
+import subprocess
+import re
 
-
-"""
-
-"""
 def get_files(path):
     """
     A generator function: Iterates through all .txt files in the path and
@@ -24,31 +25,25 @@ def get_files(path):
                     yield f.read()
 
 def get_distinct_words(path) -> int:
-    distinct_words = {} # set
+    distinct_words = set() # set
     for f in get_files(path):
         for word in f.strip().split():
-            distinct_words.append(word)
+            distinct_words.add(word)
 
     return len(distinct_words)
         
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description='Using HyperLogLog, computes the approximate number of '
-            'distinct words in all .txt files under the given path.'
-    )
-    parser.add_argument('path',help='path to walk',type=str)
-    path = args.path
     registers = 1024
     workers = 64
 
     # First get the exact number of distincs words 
-    distinct_words_count = get_distinct_words(path)
+    distinct_words_count = get_distinct_words("data/small")
 
     results = []
     for i in range(1000):
-        seed = secrets.token_hex(4) # random 32-bit hex value
-        cmd = ["./assignment5_problem3.py", "-s", str(seed), "-m", str(registers), "-w", str(workers), f"data/small"]
+        seed = f"0x{secrets.token_hex(4)}" # random 32-bit hex value
+        cmd = ["./assignment5_problem3.py", "-s", seed, "-m", str(registers), "-w", str(workers), f"data/small"]
         process = subprocess.run(cmd, capture_output=True, text=True)
         output = process.stdout
 

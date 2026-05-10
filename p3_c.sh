@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH --partition=long
+#SBATCH --partition=short
 #SBATCH -c 64
 #SBATCH -o latest_p3_c.log
 
@@ -11,4 +11,4 @@ apptainer exec \
     --bind "$HOME" \
     --bind "$dataset:$HOME/a5-hyperloglog/data" \
     $container \
-    bash -c "./p3_c.py;"
+    bash -c "./assignment5_problem3_mod.py -s 0x9747b28c -m 1024 -w 64 data/small;"
