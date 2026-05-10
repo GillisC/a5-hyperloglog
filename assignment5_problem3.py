@@ -7,8 +7,8 @@ from pyspark import SparkContext, SparkConf
 import math
 import time
 
-from assigment5_problem1 import murmur3_32 as hash_function
-from assigment5_problem2 import rho as get_rho
+from assignment5_problem1 import murmur3_32 as hash_function
+from assignment5_problem2 import rho as get_rho
 
 def murmur3_32(key, seed):
     """Computes the 32-bit murmur3 hash"""
@@ -40,14 +40,11 @@ def compute_jr(key,seed,log2m):
 
     Return a tuple (j,r) of integers
     """
-    n = n & 0xffffffff
-
-    for i in range(32):
-        if (n & 0x80000000) != 0:
-            return i+1
-        n = (n << 1) & 0xffffffff
-
-    return 0
+    h = murmur3_32(key,seed)
+    j = ~(0xffffffff << log2m) & h
+    #print(f"hash: {h:0>32b}")
+    r = rho(h)
+    return j, r
 
 def get_files(path):
     """
@@ -76,7 +73,7 @@ def alpha(m):
         return 0.697
     elif m == 64:
         return 0.709
-    else
+    else:
         return (0.7213 / (1 + 1.079 / m))
 
 if __name__ == '__main__':
@@ -97,6 +94,7 @@ if __name__ == '__main__':
     if m <= 0 or (m&(m-1)) != 0:
         sys.stderr.write(f'{sys.argv[0]}: m must be a positive power of 2\n')
         quit(1)
+
     log2m = dlog2(m)
 
     num_workers = args.num_workers
@@ -117,25 +115,32 @@ if __name__ == '__main__':
     sc = SparkContext(conf=conf)
 
     # data can be thought of like a long string containing the file contents
-    data = sc.parallelize(get_files(path))
+    #data = sc.parallelize(get_files(path))
+    data = sc.textFile(f"{path}/*.txt") # nodes read files instead of the driver
     
+    # main computation part
+    # incoming data is a single file content as a single string
+    # split the string into words
+    # get the j and rho from the word
+    # reduceByKey(max) takes all j and rho values and for each unique j reduces to the max rho value found
     data = data.flatMap(lambda x: x.split()) \
         .map(lambda x: compute_jr(x, seed, log2m)) \
         .reduceByKey(max)
     
+    # execute
     data = data.collect()
 
-    registers = []
-    for j, r in data.items():
+    registers = [0] * m
+    for j, r in data:
         registers[j] = r
 
     # harmonic mean
     harm_mean = 0
     for i in range(len(registers)):
-        harm_mean += 1 / (2 ** registers[i])
+        harm_mean += 1 / (2**registers[i])
 
     # estimate
-    E = alpha(logm) * logm * logm / harm_mean
+    E = alpha(m) * (m**2) / harm_mean
     
     end = time.time()
 

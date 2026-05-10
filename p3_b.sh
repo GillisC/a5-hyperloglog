@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 
-#SBATCH -c 32
-#SBATCH -o latest.log
+#SBATCH --partition=long
+#SBATCH -c 64
+#SBATCH -o latest_p3_b_measure.log
 
-container="/data/courses/2026_dat471_dit066/containers/assignment5.sif"
+container="/data/courses/2026_dat471_dit066/containers/assignment4.sif"
 dataset="/data/courses/2026_dat471_dit066/datasets/gutenberg"
 
 apptainer exec \
     --bind "$HOME" \
     --bind "$dataset:$HOME/a5-hyperloglog/data" \
     $container \
-    bash -c "./assignment5_problem3.py -s 0x9747b28c -m 32768 -w 32 data/medium;"
+    bash -c "./p3_b_measure.py;"
